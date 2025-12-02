@@ -1,0 +1,39 @@
+{
+  "name": "@tunghtml/strapi-plugin-filtered-relation",
+  "version": "1.1.0",
+  "description": "A Strapi custom field plugin for displaying filtered relations with dynamic placeholder support and status change capability",
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "custom-field",
+    "relation",
+    "filter",
+    "strapi5"
+  ],
+  "strapi": {
+    "name": "filtered-relation",
+    "displayName": "Filtered Relation",
+    "description": "Relation field with filtering capability, dynamic placeholders, and status change",
+    "kind": "plugin"
+  },
+  "dependencies": {
+    "@strapi/design-system": "^2.0.0-rc.14",
+    "@strapi/icons": "^2.0.0-rc.14"
+  },
+  "peerDependencies": {
+    "@strapi/strapi": "^5.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.0.0",
+    "styled-components": "^6.0.0"
+  },
+  "author": {
+    "name": "Tung HTML",
+    "email": "tunghtml@example.com"
+  },
+  "engines": {
+    "node": ">=18.0.0 <=22.x.x",
+    "npm": ">=6.0.0"
+  },
+  "license": "MIT"
+}
