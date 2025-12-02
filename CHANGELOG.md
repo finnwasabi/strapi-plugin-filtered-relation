@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.1.2] - 2024-12-02
+
+### Fixed
+
+- **Critical Bug - Data Loss Prevention**: Fixed critical bug where disconnect operation happened before validating target record existence
+  - Previously: Disconnected investor first, then checked if target exists → data loss if target missing
+  - Now: Validates ALL conditions first (target exists, data valid), then performs disconnect/connect
+  - Prevents "Investor not found in current record" error on subsequent operations
+  - Users can now safely perform multiple status changes without page refresh
+- **Improved Error Notifications**: Changed error notification type from "warning" to "danger"
+  - Makes errors more visible and distinguishable from warnings
+  - Helps users quickly identify critical issues that need attention
+
+### Changed
+
+- Reordered `handleStatusChange` logic flow:
+  1. Get current record data
+  2. Find investor to move
+  3. **Validate target record exists** (NEW - moved before disconnect)
+  4. **Validate target data is valid** (NEW)
+  5. Disconnect from current record (only after validation passes)
+  6. Connect to target record
+  7. Refresh UI
+- All error notifications now use `type: "danger"` instead of `type: "warning"`
+
+### Technical Details
+
+- Added validation check for target record data integrity before any mutations
+- Prevents partial state updates that could leave data in inconsistent state
+- Follows transaction-like pattern: validate everything, then commit changes
+
 ## [1.1.1] - 2024-12-02
 
 ### Fixed

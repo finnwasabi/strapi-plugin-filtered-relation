@@ -172,35 +172,14 @@ const FilteredRelationInput = (props) => {
           "[FilteredRelation] Investor not found in current record"
         );
         toggleNotification({
-          type: "warning",
+          type: "danger",
           message:
             "Investor not found in current record. Please refresh the page.",
         });
         return;
       }
 
-      // Build full payload like UI admin does
-      const updatePayload = {
-        documentId: currentData.documentId,
-        [displayField]: {
-          connect: [],
-          disconnect: [
-            {
-              id: investorToRemove.id,
-              documentId: investorToRemove.documentId,
-            },
-          ],
-        },
-        participantStatus: currentData.participantStatus,
-      };
-
-      // Use disconnect with full payload
-      const removeResponse = await put(
-        `/content-manager/collection-types/${targetModel}/${itemId}`,
-        updatePayload
-      );
-
-      // Step 3: Find Meeting Participation Status with new status (same meeting)
+      // Step 3: VALIDATE target record EXISTS BEFORE disconnecting (critical fix)
       const newFilterParams = {};
       if (filterField1) {
         newFilterParams[filterField1] = newStatus;
@@ -229,16 +208,13 @@ const FilteredRelationInput = (props) => {
         searchResponse?.data ||
         [];
 
-      let targetRecordId;
-      let targetInvestors = [];
-
       if (targetRecords.length === 0) {
         console.error(
           "[FilteredRelation] No target record found with new status for this meeting."
         );
         const collectionDisplayName = targetModelInput || "record";
         toggleNotification({
-          type: "warning",
+          type: "danger",
           message: `No ${collectionDisplayName} found with status "${newStatus}" for this meeting. Please create one first.`,
         });
         return;
@@ -246,14 +222,44 @@ const FilteredRelationInput = (props) => {
 
       // Get full target record data
       const targetRecord = targetRecords[0];
-      targetRecordId = targetRecord.documentId || targetRecord.id;
+      const targetRecordId = targetRecord.documentId || targetRecord.id;
 
       // Get target record with all fields
       const targetRecordUrl = `/content-manager/collection-types/${targetModel}/${targetRecordId}?populate=*`;
       const targetRecordFull = await get(targetRecordUrl);
       const targetData = targetRecordFull?.data?.data || {};
 
-      // Step 4: Add investor to target record
+      if (!targetData || !targetData.documentId) {
+        console.error("[FilteredRelation] Target record data is invalid");
+        toggleNotification({
+          type: "danger",
+          message: "Target record not found. Please refresh and try again.",
+        });
+        return;
+      }
+
+      // Step 4: NOW disconnect from current record (after validation passed)
+      const updatePayload = {
+        documentId: currentData.documentId,
+        [displayField]: {
+          connect: [],
+          disconnect: [
+            {
+              id: investorToRemove.id,
+              documentId: investorToRemove.documentId,
+            },
+          ],
+        },
+        participantStatus: currentData.participantStatus,
+      };
+
+      // Use disconnect with full payload
+      const removeResponse = await put(
+        `/content-manager/collection-types/${targetModel}/${itemId}`,
+        updatePayload
+      );
+
+      // Step 5: Add investor to target record
       // Build full payload like UI admin does
       const addPayload = {
         documentId: targetData.documentId,
