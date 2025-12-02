@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.1] - 2024-12-02
+
+### Fixed
+
+- **State Refresh Issue**: Fixed "Investor not found in current record" error that occurred after status changes
+  - Now refreshes local state immediately after disconnect/connect operations
+  - Prevents stale data issues when performing multiple status changes without page reload
+  - Reordered refresh logic: local field first, then dispatch event to other fields
+- **User Experience**: Replaced browser `alert()` with Strapi's native notification system
+  - Success notifications for successful status changes
+  - Warning notifications for missing records or data issues
+  - Danger notifications for errors
+  - All notifications use `useNotification` hook from `@strapi/strapi/admin`
+
+### Changed
+
+- Improved notification messages to be more user-friendly
+- Enhanced error handling with proper notification types
+
 ## [1.1.0] - 2024-12-02
 
 ### Added

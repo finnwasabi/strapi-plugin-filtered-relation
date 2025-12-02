@@ -8,12 +8,13 @@ import {
   SingleSelect,
   SingleSelectOption,
 } from "@strapi/design-system";
-import { useFetchClient } from "@strapi/strapi/admin";
+import { useFetchClient, useNotification } from "@strapi/strapi/admin";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const FilteredRelationInput = (props) => {
   const { formatMessage } = useIntl();
   const { get, put } = useFetchClient();
+  const { toggleNotification } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const [items, setItems] = React.useState([]);
@@ -96,7 +97,7 @@ const FilteredRelationInput = (props) => {
           data: {
             [name]: newValue,
           },
-        },
+        }
       );
     } catch (err) {
       console.error("Error auto-saving filtered relation:", err);
@@ -116,7 +117,7 @@ const FilteredRelationInput = (props) => {
         // Try 1: Get from content-type-builder (most reliable for schema)
         try {
           const builderResponse = await get(
-            `/content-type-builder/content-types/${targetModel}`,
+            `/content-type-builder/content-types/${targetModel}`
           );
           const builderSchema = builderResponse?.data?.data?.schema;
           enumValues = builderSchema?.attributes?.[statusField]?.enum;
@@ -168,9 +169,13 @@ const FilteredRelationInput = (props) => {
 
       if (!investorToRemove) {
         console.error(
-          "[FilteredRelation] Investor not found in current record",
+          "[FilteredRelation] Investor not found in current record"
         );
-        alert("Investor not found in current record");
+        toggleNotification({
+          type: "warning",
+          message:
+            "Investor not found in current record. Please refresh the page.",
+        });
         return;
       }
 
@@ -192,7 +197,7 @@ const FilteredRelationInput = (props) => {
       // Use disconnect with full payload
       const removeResponse = await put(
         `/content-manager/collection-types/${targetModel}/${itemId}`,
-        updatePayload,
+        updatePayload
       );
 
       // Step 3: Find Meeting Participation Status with new status (same meeting)
@@ -229,12 +234,13 @@ const FilteredRelationInput = (props) => {
 
       if (targetRecords.length === 0) {
         console.error(
-          "[FilteredRelation] No target record found with new status for this meeting.",
+          "[FilteredRelation] No target record found with new status for this meeting."
         );
         const collectionDisplayName = targetModelInput || "record";
-        alert(
-          `No ${collectionDisplayName} found with status "${newStatus}" for this meeting. Please create one first.`,
-        );
+        toggleNotification({
+          type: "warning",
+          message: `No ${collectionDisplayName} found with status "${newStatus}" for this meeting. Please create one first.`,
+        });
         return;
       }
 
@@ -266,21 +272,29 @@ const FilteredRelationInput = (props) => {
       // Use connect with full payload
       const addResponse = await put(
         `/content-manager/collection-types/${targetModel}/${targetRecordId}`,
-        addPayload,
+        addPayload
       );
 
-      // Dispatch custom event to trigger refresh of all filtered relation fields
+      // Refresh current field first to update local state
+      await fetchFilteredData();
+
+      // Then dispatch custom event to trigger refresh of all other filtered relation fields
       window.dispatchEvent(
         new CustomEvent("filtered-relation-updated", {
           detail: { documentId, targetModel },
-        }),
+        })
       );
 
-      // Refresh current field
-      await fetchFilteredData();
+      toggleNotification({
+        type: "success",
+        message: "Status changed successfully",
+      });
     } catch (err) {
       console.error("[FilteredRelation] Error moving investor:", err);
-      alert("Failed to change status. Check console for details.");
+      toggleNotification({
+        type: "danger",
+        message: "Failed to change status. Please try again.",
+      });
     } finally {
       setUpdatingStatus((prev) => ({ ...prev, [itemId]: false }));
     }
@@ -387,7 +401,7 @@ const FilteredRelationInput = (props) => {
 
         // Auto-save to database
         const documentIds = formattedItems.map(
-          (item) => item.relatedDocumentId || item.id,
+          (item) => item.relatedDocumentId || item.id
         );
         const newValue = JSON.stringify(documentIds);
 
