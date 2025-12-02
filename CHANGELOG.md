@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.3] - 2024-12-02
+
+### Changed
+
+- **Package cleanup**: Added `files` field to package.json to only publish necessary files
+  - Removed unnecessary files from npm package (push-to-github.sh, PUBLISH.md, etc.)
+  - Reduces package size and keeps it clean
+  - Only includes: admin/, server/, strapi-admin.js, strapi-server.js, README.md, CHANGELOG.md
+
 ## [1.1.2] - 2024-12-02
 
 ### Fixed
