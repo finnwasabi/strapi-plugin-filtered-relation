@@ -109,3 +109,7 @@ Current version: 1.1.0
 ## License
 
 MIT
+
+---
+
+Built by **Tung Le**. More Strapi plugins and case studies at [tungln.is-a.dev](https://tungln.is-a.dev).
