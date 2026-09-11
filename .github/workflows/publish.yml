@@ -1,8 +1,12 @@
 name: Publish to npm
 
-# Chay bang tay. Trusted publishing lay danh tinh tu chinh GitHub Actions qua OIDC,
-# nen khong co token npm nao nam trong repo hay trong secrets.
+# Chay khi package.json doi tren main, hoac khi bam tay trong tab Actions.
+# Buoc kiem ben duoi chi phat hanh khi so phien ban chua ton tai tren npm, nen
+# sua mo ta hay phu thuoc roi push cung khong sinh ra lan chay do vo nghia.
 on:
+  push:
+    branches: [main]
+    paths: ['package.json']
   workflow_dispatch:
 
 permissions:
@@ -23,4 +27,19 @@ jobs:
       # OIDC chi co tu npm 11.5.1, ban di kem Node 22 con cu hon the.
       - run: npm install -g npm@latest
 
-      - run: npm publish --access public
+      - id: check
+        name: Xem phien ban nay da co tren npm chua
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "goi: $NAME@$VERSION"
+          if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then
+            echo "da co tren npm, bo qua buoc phat hanh"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "chua co, se phat hanh"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.check.outputs.publish == 'true'
+        run: npm publish --access public
