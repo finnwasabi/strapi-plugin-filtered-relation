@@ -1,0 +1,26 @@
+name: Publish to npm
+
+# Chay bang tay. Trusted publishing lay danh tinh tu chinh GitHub Actions qua OIDC,
+# nen khong co token npm nao nam trong repo hay trong secrets.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # bat buoc, day la thu sinh ra OIDC token cho npm
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # OIDC chi co tu npm 11.5.1, ban di kem Node 22 con cu hon the.
+      - run: npm install -g npm@latest
+
+      - run: npm publish --access public
