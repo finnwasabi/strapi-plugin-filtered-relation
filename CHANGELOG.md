@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.7] - 2026-10-19
+
+### Fixed
+
+- Removed the auto-save that could never run in Strapi 5 (it needed `contentType`/`model` props the Content Manager does not pass) and sent a wrongly shaped payload
+- Hooks no longer run after an early return
+
+### Changed
+
+- The lifecycle hook collects filtered-relation fields once instead of scanning every content type on each database write
+- Split the hook into small functions, removed unused variables and the nested ternary in the field render
+
 ## [1.1.3] - 2024-12-02
 
 ### Changed

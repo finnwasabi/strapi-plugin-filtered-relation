@@ -22,10 +22,6 @@ const FilteredRelationInput = (props) => {
   const [statusOptions, setStatusOptions] = React.useState([]);
   const [updatingStatus, setUpdatingStatus] = React.useState({});
 
-  if (!props) {
-    return null;
-  }
-
   const { attribute, name, error, value } = props;
 
   // Extract documentId from URL path
@@ -85,25 +81,6 @@ const FilteredRelationInput = (props) => {
     filterParams[filterField2] = value2;
   }
 
-  const contentType = props.contentType || props.model;
-
-  const saveFieldValue = async (newValue) => {
-    if (!documentId || !contentType) return;
-
-    try {
-      await put(
-        `/content-manager/collection-types/${contentType}/${documentId}`,
-        {
-          data: {
-            [name]: newValue,
-          },
-        }
-      );
-    } catch (err) {
-      console.error("Error auto-saving filtered relation:", err);
-    }
-  };
-
   // Fetch status options from target model schema
   React.useEffect(() => {
     const fetchStatusOptions = async () => {
@@ -121,8 +98,8 @@ const FilteredRelationInput = (props) => {
           );
           const builderSchema = builderResponse?.data?.data?.schema;
           enumValues = builderSchema?.attributes?.[statusField]?.enum;
-        } catch (e) {
-          // Endpoint might not be accessible, try next
+        } catch {
+          // Endpoint might not be accessible: no status options then
         }
 
         if (enumValues && Array.isArray(enumValues)) {
@@ -254,7 +231,7 @@ const FilteredRelationInput = (props) => {
       };
 
       // Use disconnect with full payload
-      const removeResponse = await put(
+      await put(
         `/content-manager/collection-types/${targetModel}/${itemId}`,
         updatePayload
       );
@@ -276,7 +253,7 @@ const FilteredRelationInput = (props) => {
       };
 
       // Use connect with full payload
-      const addResponse = await put(
+      await put(
         `/content-manager/collection-types/${targetModel}/${targetRecordId}`,
         addPayload
       );
@@ -328,11 +305,6 @@ const FilteredRelationInput = (props) => {
           return `filters[$and][${index}][${key}][$eq]=${encodeURIComponent(value)}`;
         })
         .join("&");
-
-      const populateFields = [displayField];
-      if (statusField) {
-        populateFields.push(statusField);
-      }
 
       const apiUrl = `/content-manager/collection-types/${targetModel}?${filterQuery}&populate[${displayField}][populate]=*`;
       const response = await get(apiUrl);
@@ -404,21 +376,8 @@ const FilteredRelationInput = (props) => {
         });
 
         setItems(formattedItems);
-
-        // Auto-save to database
-        const documentIds = formattedItems.map(
-          (item) => item.relatedDocumentId || item.id
-        );
-        const newValue = JSON.stringify(documentIds);
-
-        if (documentId && value !== newValue) {
-          await saveFieldValue(newValue);
-        }
       } else {
         setItems([]);
-        if (documentId && value) {
-          await saveFieldValue(null);
-        }
       }
     } catch (err) {
       console.error("Error fetching filtered relations:", err);
@@ -458,83 +417,92 @@ const FilteredRelationInput = (props) => {
   const fieldLabel = props.label || name;
   const itemCount = items.length;
 
+  let content;
+  if (loading) {
+    content = (
+      <Typography variant="omega" textColor="neutral600">
+        {formatMessage({
+          id: "filtered-relation.loading",
+          defaultMessage: "Loading...",
+        })}
+      </Typography>
+    );
+  } else if (items.length > 0) {
+    content = (
+      <Flex direction="column" alignItems="stretch" gap={1}>
+        {items.map((item) => {
+          const editUrl = `/content-manager/collection-types/${item.relationModel}/${item.relatedDocumentId}`;
+          const isUpdating = updatingStatus[item.originalId];
+
+          return (
+            <Box
+              key={item.id}
+              background="neutral0"
+              borderColor="neutral200"
+              borderStyle="solid"
+              borderWidth="1px"
+              hasRadius
+              paddingTop={2}
+              paddingBottom={2}
+              paddingLeft={4}
+              paddingRight={4}
+              style={{
+                cursor: "pointer",
+                minHeight: "50px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+              onClick={() => navigate(editUrl)}
+            >
+              <Typography variant="omega" textColor="primary600">
+                {item.label}
+              </Typography>
+
+              {statusField && statusOptions.length > 0 && (
+                <Box
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ minWidth: "150px" }}
+                >
+                  <SingleSelect
+                    size="S"
+                    value={item.currentStatus}
+                    onChange={(value) =>
+                      handleStatusChange(item.originalId, value, null)
+                    }
+                    disabled={isUpdating}
+                  >
+                    {statusOptions.map((status) => (
+                      <SingleSelectOption key={status} value={status}>
+                        {status}
+                      </SingleSelectOption>
+                    ))}
+                  </SingleSelect>
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+      </Flex>
+    );
+  } else {
+    content = (
+      <Typography variant="omega" textColor="neutral600">
+        {formatMessage({
+          id: "filtered-relation.no-results",
+          defaultMessage: "No matching records found",
+        })}
+      </Typography>
+    );
+  }
+
   return (
     <Field.Root name={name} error={error}>
       <Flex direction="column" alignItems="stretch" gap={1}>
         <Field.Label>
           {fieldLabel} {itemCount > 0 && `(${itemCount})`}
         </Field.Label>
-        {loading ? (
-          <Typography variant="omega" textColor="neutral600">
-            {formatMessage({
-              id: "filtered-relation.loading",
-              defaultMessage: "Loading...",
-            })}
-          </Typography>
-        ) : items.length > 0 ? (
-          <Flex direction="column" alignItems="stretch" gap={1}>
-            {items.map((item) => {
-              const editUrl = `/content-manager/collection-types/${item.relationModel}/${item.relatedDocumentId}`;
-              const isUpdating = updatingStatus[item.originalId];
-
-              return (
-                <Box
-                  key={item.id}
-                  background="neutral0"
-                  borderColor="neutral200"
-                  borderStyle="solid"
-                  borderWidth="1px"
-                  hasRadius
-                  paddingTop={2}
-                  paddingBottom={2}
-                  paddingLeft={4}
-                  paddingRight={4}
-                  style={{
-                    cursor: "pointer",
-                    minHeight: "50px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                  onClick={() => navigate(editUrl)}
-                >
-                  <Typography variant="omega" textColor="primary600">
-                    {item.label}
-                  </Typography>
-
-                  {statusField && statusOptions.length > 0 && (
-                    <Box
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ minWidth: "150px" }}
-                    >
-                      <SingleSelect
-                        size="S"
-                        value={item.currentStatus}
-                        onChange={(value) =>
-                          handleStatusChange(item.originalId, value, null)
-                        }
-                        disabled={isUpdating}
-                      >
-                        {statusOptions.map((status) => (
-                          <SingleSelectOption key={status} value={status}>
-                            {status}
-                          </SingleSelectOption>
-                        ))}
-                      </SingleSelect>
-                    </Box>
-                  )}
-                </Box>
-              );
-            })}
-          </Flex>
-        ) : (
-          <Typography variant="omega" textColor="neutral600">
-            {formatMessage({
-              id: "filtered-relation.no-results",
-              defaultMessage: "No matching records found",
-            })}
-          </Typography>
-        )}
+        {content}
         <Field.Hint>
           <Typography variant="pi" textColor="neutral600">
             {Object.keys(filterParams).length > 0

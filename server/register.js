@@ -23,93 +23,93 @@ module.exports = ({ strapi }) => {
   });
 };
 
+const FILTERED_RELATION_UID = "plugin::filtered-relation.filtered-relation";
+
+// Parse collection name to API ID
+const parseCollectionName = (name) => {
+  if (!name) return null;
+  if (name.startsWith("api::")) return name;
+  const slug = name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+  return `api::${slug}.${slug}`;
+};
+
+// Static filters only: values bound to the current document cannot be resolved here
+const buildStaticFilters = ({
+  filterField1,
+  filterValue1,
+  filterField2,
+  filterValue2,
+}) => {
+  const filterParams = {};
+  if (filterField1 && filterValue1 && filterValue1 !== "{{documentId}}") {
+    filterParams[filterField1] = filterValue1;
+  }
+  if (filterField2 && filterValue2 && filterValue2 !== "{{documentId}}") {
+    filterParams[filterField2] = filterValue2;
+  }
+  return filterParams;
+};
+
+// Schemas are fixed once Strapi is running, so the filtered-relation fields are collected once
+let filteredRelationFields = null;
+
+function getFilteredRelationFields(strapi) {
+  if (filteredRelationFields) return filteredRelationFields;
+
+  filteredRelationFields = [];
+  for (const uid of Object.keys(strapi.contentTypes)) {
+    if (!uid.startsWith("api::")) continue;
+
+    const schema = strapi.getModel(uid);
+    for (const [fieldName, fieldConfig] of Object.entries(
+      schema?.attributes || {},
+    )) {
+      if (fieldConfig.customField !== FILTERED_RELATION_UID) continue;
+
+      const options = fieldConfig.options || {};
+      filteredRelationFields.push({
+        uid,
+        schema,
+        fieldName,
+        targetModel: parseCollectionName(options.targetModel),
+        filterParams: buildStaticFilters(options),
+        displayField: options.displayField,
+      });
+    }
+  }
+  return filteredRelationFields;
+}
+
 async function updateRelatedFilteredFields(event, strapi) {
   const { model } = event;
   if (!model) return;
 
-  const currentModelUid = model.uid;
-
   try {
-    // Get all content types to find which ones have filtered-relation fields
-    const contentTypes = strapi.contentTypes;
+    const fields = getFilteredRelationFields(strapi).filter(
+      (field) => field.targetModel === model.uid,
+    );
 
-    for (const [uid, contentType] of Object.entries(contentTypes)) {
-      // Skip non-API content types
-      if (!uid.startsWith("api::")) continue;
+    for (const field of fields) {
+      // Find all related entities that need updating
+      const relatedEntities = await findRelatedEntities(
+        event,
+        field.schema,
+        field.uid,
+      );
 
-      const schema = strapi.getModel(uid);
-      if (!schema?.attributes) continue;
-
-      // Find filtered-relation fields that target the current model
-      for (const [fieldName, fieldConfig] of Object.entries(
-        schema.attributes,
-      )) {
-        if (
-          fieldConfig.customField ===
-          "plugin::filtered-relation.filtered-relation"
-        ) {
-          const {
-            targetModel: targetModelInput,
-            filterField1,
-            filterValue1,
-            filterField2,
-            filterValue2,
-            displayField,
-          } = fieldConfig.options || {};
-
-          // Parse collection name to API ID
-          const parseCollectionName = (name) => {
-            if (!name) return null;
-            if (name.startsWith("api::")) return name;
-            const slug = name
-              .toLowerCase()
-              .replace(/\s+/g, "-")
-              .replace(/[^a-z0-9-]/g, "");
-            return `api::${slug}.${slug}`;
-          };
-
-          const targetModel = parseCollectionName(targetModelInput);
-
-          // Build filter params
-          const filterParams = {};
-          if (
-            filterField1 &&
-            filterValue1 &&
-            filterValue1 !== "{{documentId}}"
-          ) {
-            filterParams[filterField1] = filterValue1;
-          }
-          if (
-            filterField2 &&
-            filterValue2 &&
-            filterValue2 !== "{{documentId}}"
-          ) {
-            filterParams[filterField2] = filterValue2;
-          }
-
-          // Check if this field targets the model that was just modified
-          if (targetModel === currentModelUid) {
-            // Find all related entities that need updating
-            const relatedEntities = await findRelatedEntities(
-              event,
-              schema,
-              uid,
-            );
-
-            // Update each related entity
-            for (const entityId of relatedEntities) {
-              await updateFilteredField(
-                strapi,
-                uid,
-                entityId,
-                fieldName,
-                targetModel,
-                filterParams,
-                displayField,
-              );
-            }
-          }
-        }
+      for (const entityId of relatedEntities) {
+        await updateFilteredField(
+          strapi,
+          field.uid,
+          entityId,
+          field.fieldName,
+          field.targetModel,
+          field.filterParams,
+          field.displayField,
+        );
       }
     }
   } catch (error) {
