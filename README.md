@@ -1,5 +1,10 @@
 # Strapi Plugin Filtered Relation
 
+> [!IMPORTANT]
+> **This plugin has moved to [Strapi Field Kit](https://github.com/finnwasabi/strapi-field-kit/tree/main/packages/filtered-relation).**
+> Version 2.0 and later are developed there; please open issues and pull requests in that repository.
+> The npm package name is unchanged, and 1.x releases stay installable. See the [upgrade notes](https://github.com/finnwasabi/strapi-field-kit/tree/main/packages/filtered-relation#upgrading-from-1x).
+
 A Strapi 5 custom field plugin for displaying filtered relations with dynamic placeholder support and status change capability.
 
 ## Features
