@@ -12,12 +12,6 @@ A Strapi 5 custom field plugin for displaying filtered relations with dynamic pl
 
 ## Installation
 
-### Local Development
-
-This plugin is currently being used as a local plugin. It's located in `backend/src/plugins/filtered-relation`.
-
-### NPM Package (for publishing)
-
 ```bash
 npm install @tunghtml/strapi-plugin-filtered-relation
 # or
@@ -32,10 +26,11 @@ Add to `config/plugins.js`:
 module.exports = {
   "filtered-relation": {
     enabled: true,
-    resolve: "./src/plugins/filtered-relation", // for local plugin
   },
 };
 ```
+
+If you keep a copy of the plugin inside your project instead of installing it from npm, add `resolve: "./src/plugins/filtered-relation"` pointing at that folder.
 
 ## Usage
 
